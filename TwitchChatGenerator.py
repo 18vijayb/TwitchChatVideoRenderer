@@ -1,5 +1,4 @@
 import json
-import requests
 import os
 from progressbar import ProgressBar
 from PIL import Image
