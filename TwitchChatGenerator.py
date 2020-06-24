@@ -10,7 +10,8 @@ def width(filepath):
     return width
 
 def create_video(videopath, width, height, duration):
-    command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
+    #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
+    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=black@0.0:"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,fontSize,color,outputFilter):
@@ -132,4 +133,4 @@ def createChatImage(path,chatfile):
     #print(ffmpeg_command)
     subprocess.call(ffmpeg_command)
 
-createChatImage("/tmp/tomo/customers/vjb-reqs/1xNpYtVFRCPSwDQDAQFz1ET8cqODoON6/","653723977.json")
+createChatImage("./","658271026.json")
