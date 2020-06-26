@@ -11,8 +11,45 @@ COMMENT_SPACING = 10
 LINE_SPACING = 5
 ORIGIN_X = 0
 ORIGIN_Y = 0
+VIDEO_WIDTH = 1920
+VIDEO_HEIGHT = 1080
+FONT_SIZE = 20
+Arial = "/Users/Vijay/Downloads/SampleMatches/Arial.ttf"
+ArialBold = "/Users/Vijay/Downloads/SampleMatches/ArialBold.ttf"
 
 #####CONSTANTS#######
+
+def convert_rgba_to_hex(inp):
+    try:
+        rgba = inp[5:-1]
+        rgba=rgba.split(", ")
+        red = str(hex(int(rgba[0])))[2:]
+        if (len(red)==1):
+            red="0"+red
+        blue = str(hex(int(rgba[1])))[2:]
+        if (len(blue)==1):
+            blue="0"+blue
+        green = str(hex(int(rgba[2])))[2:]
+        if (len(green)==1):
+            green="0"+green
+        alpha = rgba[3]
+        return "#"+red+blue+green+"@",alpha
+    except:
+        return convert_rgb_to_hex(inp)
+
+def convert_rgb_to_hex(rgb):
+    rgb = rgb[4:-1]
+    rgb=rgb.split(", ")
+    red = str(hex(int(rgb[0])))[2:]
+    if (len(red)==1):
+        red="0"+red
+    blue = str(hex(int(rgb[1])))[2:]
+    if (len(blue)==1):
+        blue="0"+blue
+    green = str(hex(int(rgb[2])))[2:]
+    if (len(green)==1):
+        green="0"+green
+    return "#"+red+blue+green
 
 def width(filepath):
     width, height = Image.open(filepath).size
@@ -23,8 +60,8 @@ def create_video(videopath, width, height, duration):
     #command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=c=green:"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
     subprocess.call(command)
 
-def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,fontSize,color,outputFilter):
-    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{fontSize}-max_glyph_a:x={xCoordinate}:fontsize={fontSize}:fontcolor='{color}' {outputFilter};".format(
+def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
+    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:FONT_SIZE={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
             inputFilter=inputFilter,
             startTime=startTime,
             endTime=endTime,
@@ -32,7 +69,7 @@ def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,fon
             text=text,
             yCoordinate=yCoordinate,
             xCoordinate=xCoordinate,
-            fontSize=fontSize,
+            fontSize=FONT_SIZE,
             color=color,
             outputFilter = outputFilter)
 
@@ -90,6 +127,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     for fragment in comment["message"]["fragments"]:
         if "emoticon" in fragment:
             emote_path = fragment["emoticon"]["id"]+"."+fragment["emoticon"]["type"]
+            dy = width(emote_path)
         else:
             text = fragment["text"]
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
@@ -105,26 +143,27 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     return totalheight
 
 
-def createChatImage(path,chatfile):
-    Arial = "/Users/Vijay/Downloads/SampleMatches/Arial.ttf"
-    ArialBold = "/Users/Vijay/Downloads/SampleMatches/ArialBold.ttf"
+def createChatImage(path,chatfile, overlayInterval, startTime):
     BadgesFolder = path+"badges/"
     EmotesFolder = path+"emotes/"
-    video_width = 480
-    video_height = 480
-    duration = 20 #seconds
-    fontSize = 20
-    with open(path+chatfile) as frontend_data:
-        data = json.load(frontend_data)
+    startTime = overlayInterval["interval"][0]
+    endTime = overlayInterval["interval"][1]
+    video_width = overlayInterval["chatCoordinates"]["widthScale"]*VIDEO_WIDTH
+    video_height = overlayInterval["chatCoordinates"]["heightScale"]*VIDEO_HEIGHT
+    duration = endTime-startTime
+    textcolor = convert_rgb_to_hex(overlayInterval["textRGB"])
+    backgroundColor,alpha = convert_rgba_to_hex(overlayInterval["backgroundRGBA"])
+    with open(path+chatfile) as chat:
+        data = json.load(chat)
 
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24,video_width,video_height)
     ctx = cairo.Context(surface)
 
     videopath = "/Users/Vijay/Downloads/SampleMatches/blank.mp4"
-    create_video(videopath,video_width,video_height,duration)
+    create_video(videopath,video_width,video_height,backgroundColor, duration)
     ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex", ""]
     return
-    ctx.set_font_size(fontSize)
+    ctx.set_font_size(FONT_SIZE)
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y
     counter = 0
@@ -144,7 +183,7 @@ def createChatImage(path,chatfile):
         #Render username
         xbearing, ybearing, width, height, dx, dy = ctx.text_extents(username)
         outputFilter = "[username{counter}]".format(counter=counter)
-        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,ArialBold,username,yCoordinate,xCoordinate,fontSize,userColor,outputFilter)
+        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,ArialBold,username,yCoordinate,xCoordinate,userColor,outputFilter)
         xCoordinate += dx
         lastFilter=outputFilter
 
@@ -156,7 +195,7 @@ def createChatImage(path,chatfile):
         #Render colon and space after username
         xbearing, ybearing, width, height, dx, dy = ctx.text_extents(": ")
         outputFilter = "[colon{counter}]".format(counter=counter)
-        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,"\: ",yCoordinate,xCoordinate,fontSize,"#FFFFFF",outputFilter)
+        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,"\: ",yCoordinate,xCoordinate,textcolor,outputFilter)
         lastFilter = outputFilter
         xCoordinate += dx
 
@@ -173,7 +212,7 @@ def createChatImage(path,chatfile):
                     yCoordinate+=height+LINE_SPACING
                     xCoordinate=ORIGIN_X
                 #render the word
-                ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,text,yCoordinate,xCoordinate,fontSize,"#FFFFFF",outputFilter)
+                ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,text,yCoordinate,xCoordinate,"#FFFFFF",outputFilter)
                 xCoordinate += dx
                 lastFilter=outputFilter
                 fragmentCounter+=1
@@ -186,4 +225,12 @@ def createChatImage(path,chatfile):
     #print(ffmpeg_command)
     subprocess.call(ffmpeg_command)
 
-createChatImage("./","658271026.json")
+def overlay_chats(path, overlayfile, chatfile, startTime):
+    with open(path+overlayfile) as frontend_data:
+        data = json.load(frontend_data)
+    for overlayInterval in data["finalOverlayIntervals"]:
+        if overlayInterval["type"]=="chat":
+            createChatImage(path,chatfile,overlayInterval,startTime)
+    
+
+overlay_chats("./","SampleOverlayINtervals.json", "658271026.json")
