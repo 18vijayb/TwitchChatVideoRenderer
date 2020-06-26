@@ -55,9 +55,9 @@ def width(filepath):
     width, height = Image.open(filepath).size
     return width
 
-def create_video(videopath, width, height, duration):
-    command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
-    #command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=c=green:"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
+def create_video(videopath, width, height, duration, backgroundColor):
+    #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
+    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=c="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
@@ -160,7 +160,7 @@ def createChatImage(path,chatfile, overlayInterval, startTime):
     ctx = cairo.Context(surface)
 
     videopath = "/Users/Vijay/Downloads/SampleMatches/blank.mp4"
-    create_video(videopath,video_width,video_height,backgroundColor, duration)
+    create_video(videopath,video_width,video_height,duration, backgroundColor)
     ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex", ""]
     return
     ctx.set_font_size(FONT_SIZE)
@@ -231,6 +231,7 @@ def overlay_chats(path, overlayfile, chatfile, startTime):
     for overlayInterval in data["finalOverlayIntervals"]:
         if overlayInterval["type"]=="chat":
             createChatImage(path,chatfile,overlayInterval,startTime)
+            break
     
 
 overlay_chats("./","SampleOverlayINtervals.json", "658271026.json")
