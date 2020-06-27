@@ -4,6 +4,7 @@ from progressbar import ProgressBar
 from PIL import Image
 import cairo
 import subprocess
+import math
 
 #####CONSTANTS#######
 
@@ -22,7 +23,7 @@ ArialBold = "/Users/Vijay/Downloads/SampleMatches/ArialBold.ttf"
 def convert_rgba_to_hex(inp):
     try:
         rgba = inp[5:-1]
-        rgba=rgba.split(", ")
+        rgba=rgba.split(",")
         red = str(hex(int(rgba[0])))[2:]
         if (len(red)==1):
             red="0"+red
@@ -33,13 +34,13 @@ def convert_rgba_to_hex(inp):
         if (len(green)==1):
             green="0"+green
         alpha = rgba[3]
-        return "#"+red+blue+green+"@",alpha
+        return "#"+red+blue+green,alpha
     except:
         return convert_rgb_to_hex(inp)
 
 def convert_rgb_to_hex(rgb):
     rgb = rgb[4:-1]
-    rgb=rgb.split(", ")
+    rgb=rgb.split(",")
     red = str(hex(int(rgb[0])))[2:]
     if (len(red)==1):
         red="0"+red
@@ -98,6 +99,19 @@ def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,col
 #     with open('example.png','w') as f:
 #         f.write(str(chatImage.encodeToData()))
 
+def createTimeToCommentIndexMap(comments, video_start):
+    commentMap = dict()
+    index = 0
+    for comment in comments:
+        time = math.ceil(comment["content_offset_seconds"]-video_start)
+        if not time in commentMap:
+            commentMap[time] = list()
+        commentMap[time].append(index)
+        index+=1
+    return commentMap
+
+
+
 def determineMessageHeight(comment, video_width,video_height, ctx):
     xCoordinate = ORIGIN_X
     totalHeight = 0
@@ -143,7 +157,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     return totalheight
 
 
-def createChatImage(path,chatfile, overlayInterval, startTime):
+def createChatImage(path,chatfile, overlayInterval, video_start):
     BadgesFolder = path+"badges/"
     EmotesFolder = path+"emotes/"
     startTime = overlayInterval["interval"][0]
@@ -155,7 +169,7 @@ def createChatImage(path,chatfile, overlayInterval, startTime):
     backgroundColor,alpha = convert_rgba_to_hex(overlayInterval["backgroundRGBA"])
     with open(path+chatfile) as chat:
         data = json.load(chat)
-
+    timesToComments = createTimeToCommentIndexMap(data["comments"],video_start)
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24,video_width,video_height)
     ctx = cairo.Context(surface)
 
@@ -212,7 +226,7 @@ def createChatImage(path,chatfile, overlayInterval, startTime):
                     yCoordinate+=height+LINE_SPACING
                     xCoordinate=ORIGIN_X
                 #render the word
-                ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,text,yCoordinate,xCoordinate,"#FFFFFF",outputFilter)
+                ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,text,yCoordinate,xCoordinate,textcolor,outputFilter)
                 xCoordinate += dx
                 lastFilter=outputFilter
                 fragmentCounter+=1
@@ -234,4 +248,4 @@ def overlay_chats(path, overlayfile, chatfile, startTime):
             break
     
 
-overlay_chats("./","SampleOverlayINtervals.json", "658271026.json")
+overlay_chats("./","SampleOverlayINtervals.json", "658271026.json", 2700)
