@@ -58,7 +58,7 @@ def width(filepath):
 
 def create_video(videopath, width, height, duration, backgroundColor):
     #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
-    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=c="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
+    command = ["ffmpeg", "-t", str(duration+1), "-f", "lavfi", "-i", "color="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
@@ -162,21 +162,19 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     EmotesFolder = path+"emotes/"
     startTime = overlayInterval["interval"][0]
     endTime = overlayInterval["interval"][1]
-    video_width = overlayInterval["chatCoordinates"]["widthScale"]*VIDEO_WIDTH
-    video_height = overlayInterval["chatCoordinates"]["heightScale"]*VIDEO_HEIGHT
+    video_width = int(overlayInterval["chatCoordinates"]["widthScale"]*VIDEO_WIDTH)
+    video_height = int(overlayInterval["chatCoordinates"]["heightScale"]*VIDEO_HEIGHT)
     duration = endTime-startTime
     textcolor = convert_rgb_to_hex(overlayInterval["textRGB"])
     backgroundColor,alpha = convert_rgba_to_hex(overlayInterval["backgroundRGBA"])
     with open(path+chatfile) as chat:
         data = json.load(chat)
     timesToComments = createTimeToCommentIndexMap(data["comments"],video_start)
-    surface = cairo.ImageSurface(cairo.FORMAT_RGB24,video_width,video_height)
+    surface = cairo.ImageSurface(cairo.FORMAT_RGB24,1000,1000)
     ctx = cairo.Context(surface)
-
     videopath = "/Users/Vijay/Downloads/SampleMatches/blank.mp4"
     create_video(videopath,video_width,video_height,duration, backgroundColor)
     ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex", ""]
-    return
     ctx.set_font_size(FONT_SIZE)
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y
