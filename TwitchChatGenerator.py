@@ -9,7 +9,7 @@ import math
 #####CONSTANTS#######
 
 COMMENT_SPACING = 10
-LINE_SPACING = 5
+LINE_SPACING = 8
 ORIGIN_X = 0
 ORIGIN_Y = 0
 VIDEO_WIDTH = 1920
@@ -62,7 +62,7 @@ def create_video(videopath, width, height, duration, backgroundColor):
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
-    text = text.replace("'","").replace("/","").replace(":","\:")
+    text = text.replace("'","\\\\\'").replace("/","").replace(":","\:")
     return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
             inputFilter=inputFilter,
             startTime=startTime,
@@ -153,16 +153,14 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
         
         #check if out of bounds
         if (xCoordinate+dx)>video_width:
-            totalHeight+=maxheight+LINE_SPACING
+            totalHeight+=maxheight
             xCoordinate=ORIGIN_X
             maxheight=height
             multiline = True
         else:
             maxheight = max(maxheight,height)
         xCoordinate += dx
-    if not multiline:
-        return maxheight
-    return totalHeight
+    return totalHeight+maxheight
 
 def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor):
     xCoordinate = ORIGIN_X
@@ -177,7 +175,6 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
         index-=1
         numCommentsAtTime = len(timeToComments[timeInChatFile])
         if index+numCommentsAtTime<0:
-            print("Out of comments at time",timeInChatFile,"! Going back 1")
             index=-1
             timeInChatFile -= 1
             while not timeInChatFile in timeToComments and timeInChatFile>0:
@@ -185,14 +182,14 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
             if timeInChatFile == 0:
                 return heights,lastFilter,command,counter
         commentIndex = timeToComments[timeInChatFile][index]
-        print(commentIndex)
         comment = comments[commentIndex]
         if not commentIndex in heights:
             heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx)
+            print("HEIGHT OF",comment["message"]["body"],"IS",heights[commentIndex])
         yCoordinate -= heights[commentIndex]
         lastFilter,comment_command,counter = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width)
         command+=comment_command
-        yCoordinate -= LINE_SPACING
+        yCoordinate -= COMMENT_SPACING
         if yCoordinate<ORIGIN_Y:
             return heights,lastFilter,command,counter
 
@@ -282,7 +279,6 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     with open(path+"script.txt","w") as script_file:
         script_file.write(script)
     ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"]
-    #print(ffmpeg_command)
     if (os.path.exists(path+"output.mp4")):
         os.remove(path+"output.mp4")
     subprocess.call(ffmpeg_command)
