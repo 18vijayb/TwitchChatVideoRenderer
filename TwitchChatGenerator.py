@@ -52,16 +52,17 @@ def convert_rgb_to_hex(rgb):
         green="0"+green
     return "#"+red+blue+green
 
-def width(filepath):
+def emote_width(filepath):
     width, height = Image.open(filepath).size
     return width
 
 def create_video(videopath, width, height, duration, backgroundColor):
     #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
-    command = ["ffmpeg", "-t", str(duration+1), "-f", "lavfi", "-i", "color="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
+    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
+    text = text.replace("'","").replace("/","").replace(":","\:")
     return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
             inputFilter=inputFilter,
             startTime=startTime,
@@ -141,8 +142,11 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     #Render fragments of message
     for fragment in comment["message"]["fragments"]:
         if "emoticon" in fragment:
-            emote_path = fragment["emoticon"]["id"]+"."+fragment["emoticon"]["type"]
-            dy = width(emote_path)
+            if not "id" in fragment["emoticon"]:
+                emote_path = "./emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
+            else:
+                emote_path = "./emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
+            dy = emote_width(emote_path)
         else:
             text = fragment["text"]
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
@@ -173,10 +177,13 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
         index-=1
         numCommentsAtTime = len(timeToComments[timeInChatFile])
         if index+numCommentsAtTime<0:
+            print("Out of comments at time",timeInChatFile,"! Going back 1")
             index=-1
             timeInChatFile -= 1
             while not timeInChatFile in timeToComments and timeInChatFile>0:
                 timeInChatFile-=1
+            if timeInChatFile == 0:
+                return heights,lastFilter,command,counter
         commentIndex = timeToComments[timeInChatFile][index]
         print(commentIndex)
         comment = comments[commentIndex]
@@ -185,6 +192,7 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
         yCoordinate -= heights[commentIndex]
         lastFilter,comment_command,counter = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width)
         command+=comment_command
+        yCoordinate -= LINE_SPACING
         if yCoordinate<ORIGIN_Y:
             return heights,lastFilter,command,counter
 
@@ -217,7 +225,7 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
     #Render colon and space after username
     xbearing, ybearing, width, height, dx, dy = ctx.text_extents(": ")
     outputFilter = "[colon{counter}]".format(counter=counter)
-    command+=drawtext(lastFilter,startTime,endTime,Arial,"\: ",yCoordinate,xCoordinate,textcolor,outputFilter)
+    command+=drawtext(lastFilter,startTime,endTime,Arial,": ",yCoordinate,xCoordinate,textcolor,outputFilter)
     lastFilter = outputFilter
     xCoordinate += dx
 
@@ -275,7 +283,8 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
         script_file.write(script)
     ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"]
     #print(ffmpeg_command)
-    os.remove(path+"output.mp4")
+    if (os.path.exists(path+"output.mp4")):
+        os.remove(path+"output.mp4")
     subprocess.call(ffmpeg_command)
 
 def overlay_chats(path, overlayfile, chatfile, startTime):
