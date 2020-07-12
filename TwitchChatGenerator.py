@@ -62,7 +62,7 @@ def create_video(videopath, width, height, duration, backgroundColor):
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
-    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:FONT_SIZE={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
+    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
             inputFilter=inputFilter,
             startTime=startTime,
             endTime=endTime,
@@ -70,7 +70,7 @@ def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,col
             text=text,
             yCoordinate=yCoordinate,
             xCoordinate=xCoordinate,
-            fontSize=FONT_SIZE,
+            FONT_SIZE=FONT_SIZE,
             color=color,
             outputFilter = outputFilter)
 
@@ -115,7 +115,8 @@ def createTimeToCommentIndexMap(comments, video_start):
 def determineMessageHeight(comment, video_width,video_height, ctx):
     xCoordinate = ORIGIN_X
     totalHeight = 0
-    maxHeight = 0
+    maxheight = 0
+    multiline = False
     username = comment["commenter"]
 
     ctx.select_font_face("Arial",
@@ -151,11 +152,93 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
             totalHeight+=maxheight+LINE_SPACING
             xCoordinate=ORIGIN_X
             maxheight=height
+            multiline = True
         else:
             maxheight = max(maxheight,height)
         xCoordinate += dx
-    return totalheight
+    if not multiline:
+        return maxheight
+    return totalHeight
 
+def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor):
+    xCoordinate = ORIGIN_X
+    yCoordinate = ORIGIN_Y + video_height
+    command = ""
+    index = 0
+    lastFilter=inputFilter
+
+    while True:
+        while not timeInChatFile in timeToComments and timeInChatFile>0:
+            timeInChatFile-=1
+        index-=1
+        numCommentsAtTime = len(timeToComments[timeInChatFile])
+        if index+numCommentsAtTime<0:
+            index=-1
+            timeInChatFile -= 1
+            while not timeInChatFile in timeToComments and timeInChatFile>0:
+                timeInChatFile-=1
+        commentIndex = timeToComments[timeInChatFile][index]
+        print(commentIndex)
+        comment = comments[commentIndex]
+        if not commentIndex in heights:
+            heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx)
+        yCoordinate -= heights[commentIndex]
+        lastFilter,comment_command,counter = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width)
+        command+=comment_command
+        if yCoordinate<ORIGIN_Y:
+            return heights,lastFilter,command,counter
+
+def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width):
+    command = ""
+    lastFilter=inputFilter
+    endTime=startTime+1
+    if not "user_color" in comment["message"]:
+        userColor = "#FFFFFF"
+    else:
+        userColor = comment["message"]["user_color"]
+    username = comment["commenter"]
+    #Change font to bold
+    ctx.select_font_face("Arial",
+                    cairo.FONT_SLANT_NORMAL,
+                    cairo.FONT_WEIGHT_BOLD)
+
+    #Render username
+    xbearing, ybearing, width, height, dx, dy = ctx.text_extents(username)
+    outputFilter = "[username{counter}]".format(counter=counter)
+    command+=drawtext(lastFilter,startTime,endTime,ArialBold,username,yCoordinate,xCoordinate,userColor,outputFilter)
+    xCoordinate += dx
+    lastFilter=outputFilter
+
+    #Change font away from bold
+    ctx.select_font_face("Arial",
+            cairo.FONT_SLANT_NORMAL,
+            cairo.FONT_WEIGHT_NORMAL)
+
+    #Render colon and space after username
+    xbearing, ybearing, width, height, dx, dy = ctx.text_extents(": ")
+    outputFilter = "[colon{counter}]".format(counter=counter)
+    command+=drawtext(lastFilter,startTime,endTime,Arial,"\: ",yCoordinate,xCoordinate,textcolor,outputFilter)
+    lastFilter = outputFilter
+    xCoordinate += dx
+
+    #Render fragments of message
+    for fragment in comment["message"]["fragments"]:
+        if "emoticon" in fragment:
+            pass
+        else:
+            text = fragment["text"]
+            xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
+            outputFilter = "[fragment{counter}]".format(counter=counter)
+            #check if out of bounds
+            if (xCoordinate+dx)>video_width:
+                yCoordinate+=height+LINE_SPACING
+                xCoordinate=ORIGIN_X
+            #render the word
+            command+=drawtext(lastFilter,startTime,endTime,Arial,text,yCoordinate,xCoordinate,textcolor,outputFilter)
+            xCoordinate += dx
+            lastFilter=outputFilter
+            counter+=1
+    return lastFilter,command,counter
 
 def createChatImage(path,chatfile, overlayInterval, video_start):
     BadgesFolder = path+"badges/"
@@ -173,68 +256,26 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24,1000,1000)
     ctx = cairo.Context(surface)
     videopath = "/Users/Vijay/Downloads/SampleMatches/blank.mp4"
+    os.remove(videopath)
     create_video(videopath,video_width,video_height,duration, backgroundColor)
-    ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex", ""]
     ctx.set_font_size(FONT_SIZE)
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y
     counter = 0
-    fragmentCounter = 0
     lastFilter = "[0:v]"
-    for comment in data["comments"]:
-        if not "user_color" in comment["message"]:
-            userColor = "#FFFFFF"
-        else:
-            userColor = comment["message"]["user_color"]
-        username = comment["commenter"]
-        #Change font to bold
-        ctx.select_font_face("Arial",
-                     cairo.FONT_SLANT_NORMAL,
-                     cairo.FONT_WEIGHT_BOLD)
-
-        #Render username
-        xbearing, ybearing, width, height, dx, dy = ctx.text_extents(username)
-        outputFilter = "[username{counter}]".format(counter=counter)
-        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,ArialBold,username,yCoordinate,xCoordinate,userColor,outputFilter)
-        xCoordinate += dx
-        lastFilter=outputFilter
-
-        #Change font away from bold
-        ctx.select_font_face("Arial",
-                cairo.FONT_SLANT_NORMAL,
-                cairo.FONT_WEIGHT_NORMAL)
-
-        #Render colon and space after username
-        xbearing, ybearing, width, height, dx, dy = ctx.text_extents(": ")
-        outputFilter = "[colon{counter}]".format(counter=counter)
-        ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,"\: ",yCoordinate,xCoordinate,textcolor,outputFilter)
+    heights = dict()
+    script = ""
+    for time in range(0,math.floor(duration)):
+        timeInChatFile = time + math.ceil(startTime)
+        heights,outputFilter,current_command,counter = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor)
+        script += current_command
         lastFilter = outputFilter
-        xCoordinate += dx
-
-        #Render fragments of message
-        for fragment in comment["message"]["fragments"]:
-            if "emoticon" in fragment:
-                pass
-            else:
-                text = fragment["text"]
-                xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
-                outputFilter = "[fragment{counter}]".format(counter=fragmentCounter)
-                #check if out of bounds
-                if (xCoordinate+dx)>video_width:
-                    yCoordinate+=height+LINE_SPACING
-                    xCoordinate=ORIGIN_X
-                #render the word
-                ffmpeg_command[-1]+=drawtext(lastFilter,0,5,Arial,text,yCoordinate,xCoordinate,textcolor,outputFilter)
-                xCoordinate += dx
-                lastFilter=outputFilter
-                fragmentCounter+=1
-        break
-        # yCoordinate = height+yCoordinate+10
-    ffmpeg_command[-1] = ffmpeg_command[-1][:-1]
-    ffmpeg_command.append("-map")
-    ffmpeg_command.append(lastFilter)
-    ffmpeg_command.append(path+"output.mp4")
+    script = script[:-1]
+    with open(path+"script.txt","w") as script_file:
+        script_file.write(script)
+    ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"]
     #print(ffmpeg_command)
+    os.remove(path+"output.mp4")
     subprocess.call(ffmpeg_command)
 
 def overlay_chats(path, overlayfile, chatfile, startTime):
@@ -246,4 +287,4 @@ def overlay_chats(path, overlayfile, chatfile, startTime):
             break
     
 
-overlay_chats("./","SampleOverlayINtervals.json", "658271026.json", 2700)
+overlay_chats("./","SampleOverlayIntervals.json", "658271026.json", 2700)
