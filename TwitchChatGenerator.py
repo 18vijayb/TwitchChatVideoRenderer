@@ -75,6 +75,16 @@ def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,col
             color=color,
             outputFilter = outputFilter)
 
+def drawimage(inputFilter,imageFilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,filetype):
+    return "{inputFilter}{imageFilter}overlay=enable='between(t,{startTime},{endTime})':y={yCoordinate}:x={xCoordinate}{shortest} {outputFilter};".format(
+        inputFilter=inputFilter,
+        imageFilter=imageFilter,
+        startTime=startTime,
+        endTime=endTime,
+        yCoordinate=yCoordinate,
+        xCoordinate=xCoordinate,
+        shortest=":shortest=1" if filetype=="gif" else "",
+        outputFilter = outputFilter)
 
 # def createChatImage(path,chatfile):
 #     BadgesFolder = path+"badges/"
@@ -146,7 +156,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
                 emote_path = "./emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
             else:
                 emote_path = "./emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
-            dy = emote_width(emote_path)
+            dx = emote_width(emote_path)
         else:
             text = fragment["text"]
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
@@ -162,7 +172,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
         xCoordinate += dx
     return totalHeight+maxheight
 
-def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor):
+def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor,emotelist):
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y + video_height
     command = ""
@@ -180,20 +190,20 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
             while not timeInChatFile in timeToComments and timeInChatFile>0:
                 timeInChatFile-=1
             if timeInChatFile == 0:
-                return heights,lastFilter,command,counter
+                return heights,lastFilter,command,counter,emotelist
         commentIndex = timeToComments[timeInChatFile][index]
         comment = comments[commentIndex]
         if not commentIndex in heights:
             heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx)
             print("HEIGHT OF",comment["message"]["body"],"IS",heights[commentIndex])
         yCoordinate -= heights[commentIndex]
-        lastFilter,comment_command,counter = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width)
+        lastFilter,comment_command,counter,emotelist = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width,emotelist)
         command+=comment_command
         yCoordinate -= COMMENT_SPACING
         if yCoordinate<ORIGIN_Y:
-            return heights,lastFilter,command,counter
+            return heights,lastFilter,command,counter,emotelist
 
-def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width):
+def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width, emotelist):
     command = ""
     lastFilter=inputFilter
     endTime=startTime+1
@@ -228,22 +238,37 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
 
     #Render fragments of message
     for fragment in comment["message"]["fragments"]:
+        outputFilter = "[fragment{counter}]".format(counter=counter)
         if "emoticon" in fragment:
-            pass
+            if not "id" in fragment["emoticon"]:
+                emote_path = "./emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
+                filetype="png"
+            else:
+                emote_path = "./emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
+                filetype=fragment["emoticon"]["type"]
+            if not emote_path in emotelist:
+                emotelist.append(emote_path)
+                imagefilter = "[{index}:v]".format(index=len(emotelist))
+            else:
+                imagefilter = "[{index}:v]".format(index=emotelist.index(emote_path))
+            dx = emote_width(emote_path)
+            if (xCoordinate+dx)>video_width:
+                yCoordinate+=height+LINE_SPACING
+                xCoordinate=ORIGIN_X
+            command+=drawimage(lastFilter,imagefilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,filetype)
         else:
             text = fragment["text"]
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(text)
-            outputFilter = "[fragment{counter}]".format(counter=counter)
             #check if out of bounds
             if (xCoordinate+dx)>video_width:
                 yCoordinate+=height+LINE_SPACING
                 xCoordinate=ORIGIN_X
             #render the word
             command+=drawtext(lastFilter,startTime,endTime,Arial,text,yCoordinate,xCoordinate,textcolor,outputFilter)
-            xCoordinate += dx
-            lastFilter=outputFilter
-            counter+=1
-    return lastFilter,command,counter
+        xCoordinate += dx
+        lastFilter=outputFilter
+        counter+=1
+    return lastFilter,command,counter, emotelist
 
 def createChatImage(path,chatfile, overlayInterval, video_start):
     BadgesFolder = path+"badges/"
@@ -270,17 +295,29 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     lastFilter = "[0:v]"
     heights = dict()
     script = ""
+    emotelist = list()
     for time in range(0,math.floor(duration)):
         timeInChatFile = time + math.ceil(startTime)
-        heights,outputFilter,current_command,counter = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor)
+        heights,outputFilter,current_command,counter,emotelist = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor,emotelist)
         script += current_command
         lastFilter = outputFilter
     script = script[:-1]
     with open(path+"script.txt","w") as script_file:
         script_file.write(script)
-    ffmpeg_command = ["ffmpeg", "-i", videopath, "-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"]
+    ffmpeg_command = ["ffmpeg", "-i", videopath]
+    for i in range(len(emotelist)):
+        if "gif" in emotelist[i]:
+            ffmpeg_command.append("-ignore_loop")
+            ffmpeg_command.append("0")
+            ffmpeg_command.append("-i")
+            ffmpeg_command.append(emotelist[i])
+        else:
+            ffmpeg_command.append("-i")
+            ffmpeg_command.append(emotelist[i])
+    ffmpeg_command.extend(["-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"])
     if (os.path.exists(path+"output.mp4")):
         os.remove(path+"output.mp4")
+    #print(ffmpeg_command)
     subprocess.call(ffmpeg_command)
 
 def overlay_chats(path, overlayfile, chatfile, startTime):
