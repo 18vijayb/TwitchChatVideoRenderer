@@ -9,7 +9,7 @@ import math
 #####CONSTANTS#######
 
 COMMENT_SPACING = 10
-LINE_SPACING = 8
+LINE_SPACING = 10
 ORIGIN_X = 0
 ORIGIN_Y = 0
 VIDEO_WIDTH = 1920
@@ -134,6 +134,14 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
                 cairo.FONT_SLANT_NORMAL,
                 cairo.FONT_WEIGHT_BOLD)
     
+    if "user_badges" in comment["message"]:
+        for badge in comment["message"]["user_badges"]:
+            badge_path = badge["_id"] + "_" + badge["version"] + ".png"
+            dx = emote_width(badge_path)
+            xCoordinate += dx
+            xbearing, ybearing, width, height, dx, dy = ctx.text_extents(" ")
+            xCoordinate += dx
+
     #Get username width/height
     xbearing, ybearing, width, height, dx, dy = ctx.text_extents(username)
     maxheight = max(maxheight,height)
@@ -217,6 +225,27 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
                     cairo.FONT_SLANT_NORMAL,
                     cairo.FONT_WEIGHT_BOLD)
 
+    if "user_badges" in comment["message"]:
+        for badge in comment["message"]["user_badges"]:
+            outputFilter = "[badge{counter}]".format(counter=counter)
+            badge_path = badge["_id"] + "_" + badge["version"] + ".png"
+            outputFilter = "[username{counter}]".format(counter=counter)
+            if not badge_path in emotelist:
+                emotelist.append(badge_path)
+                imagefilter = "[{index}:v]".format(index=len(emotelist))
+            else:
+                imagefilter = "[{index}:v]".format(index=emotelist.index(badge_path)+1)
+            dx = emote_width(badge_path)
+            command+=drawimage(lastFilter,imagefilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,filetype)
+            xCoordinate += dx
+            lastFilter = outputFilter
+            outputFilter = "[space{counter}]".format(counter=counter)
+            xbearing, ybearing, width, height, dx, dy = ctx.text_extents(" ")
+            command+=drawtext(lastFilter,startTime,endTime,Arial," ",yCoordinate,xCoordinate,textcolor,outputFilter)
+            lastFilter = outputFilter
+            xCoordinate += dx
+            counter += 1
+
     #Render username
     xbearing, ybearing, width, height, dx, dy = ctx.text_extents(username)
     outputFilter = "[username{counter}]".format(counter=counter)
@@ -250,7 +279,7 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
                 emotelist.append(emote_path)
                 imagefilter = "[{index}:v]".format(index=len(emotelist))
             else:
-                imagefilter = "[{index}:v]".format(index=emotelist.index(emote_path))
+                imagefilter = "[{index}:v]".format(index=emotelist.index(emote_path)+1)
             dx = emote_width(emote_path)
             if (xCoordinate+dx)>video_width:
                 yCoordinate+=height+LINE_SPACING
