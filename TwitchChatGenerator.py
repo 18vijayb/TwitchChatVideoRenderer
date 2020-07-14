@@ -58,12 +58,12 @@ def emote_width(filepath):
 
 def create_video(videopath, width, height, duration, backgroundColor):
     #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
-    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "60", videopath]
+    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color="+backgroundColor+":"+str(width)+"x"+str(height), "-pix_fmt", "rgb32", "-r", "30", videopath]
     subprocess.call(command)
 
 def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,color,outputFilter):
     text = text.replace("'","").replace("/","").replace(":","\:")
-    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}+{FONT_SIZE}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
+    return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
             inputFilter=inputFilter,
             startTime=startTime,
             endTime=endTime,
@@ -76,7 +76,7 @@ def drawtext(inputFilter,startTime,endTime,font,text,yCoordinate,xCoordinate,col
             outputFilter = outputFilter)
 
 def drawimage(inputFilter,imageFilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,filetype):
-    return "{inputFilter}{imageFilter}overlay=enable='between(t,{startTime},{endTime})':y={yCoordinate}:x={xCoordinate}{shortest} {outputFilter};".format(
+    return "{inputFilter}{imageFilter}overlay=enable='between(t,{startTime},{endTime})':y={yCoordinate}-overlay_h:x={xCoordinate}{shortest} {outputFilter};".format(
         inputFilter=inputFilter,
         imageFilter=imageFilter,
         startTime=startTime,
@@ -136,7 +136,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     
     if "user_badges" in comment["message"]:
         for badge in comment["message"]["user_badges"]:
-            badge_path = badge["_id"] + "_" + badge["version"] + ".png"
+            badge_path = "./badges/"+badge["_id"] + "_" + badge["version"] + ".png"
             dx = emote_width(badge_path)
             xCoordinate += dx
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(" ")
@@ -228,7 +228,7 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
     if "user_badges" in comment["message"]:
         for badge in comment["message"]["user_badges"]:
             outputFilter = "[badge{counter}]".format(counter=counter)
-            badge_path = badge["_id"] + "_" + badge["version"] + ".png"
+            badge_path = "./badges/"+badge["_id"] + "_" + badge["version"] + ".png"
             outputFilter = "[username{counter}]".format(counter=counter)
             if not badge_path in emotelist:
                 emotelist.append(badge_path)
@@ -236,13 +236,10 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
             else:
                 imagefilter = "[{index}:v]".format(index=emotelist.index(badge_path)+1)
             dx = emote_width(badge_path)
-            command+=drawimage(lastFilter,imagefilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,filetype)
+            command+=drawimage(lastFilter,imagefilter,startTime,endTime,yCoordinate,xCoordinate,outputFilter,"png")
             xCoordinate += dx
             lastFilter = outputFilter
-            outputFilter = "[space{counter}]".format(counter=counter)
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(" ")
-            command+=drawtext(lastFilter,startTime,endTime,Arial," ",yCoordinate,xCoordinate,textcolor,outputFilter)
-            lastFilter = outputFilter
             xCoordinate += dx
             counter += 1
 
