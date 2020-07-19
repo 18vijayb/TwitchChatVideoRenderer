@@ -180,7 +180,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
         xCoordinate += dx
     return totalHeight+maxheight
 
-def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor,emotelist):
+def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor,emotelist, duration):
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y + video_height
     command = ""
@@ -205,16 +205,19 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
             heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx)
             print("HEIGHT OF",comment["message"]["body"],"IS",heights[commentIndex])
         yCoordinate -= heights[commentIndex]
-        lastFilter,comment_command,counter,emotelist = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width,emotelist)
+        lastFilter,comment_command,counter,emotelist = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width,emotelist, duration)
         command+=comment_command
         yCoordinate -= COMMENT_SPACING
         if yCoordinate<ORIGIN_Y:
             return heights,lastFilter,command,counter,emotelist
 
-def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width, emotelist):
+def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width, emotelist, duration):
     command = ""
     lastFilter=inputFilter
-    endTime=startTime+1
+    if startTime+1 >= duration-1:
+        endTime = startTime+2
+    else:
+        endTime=startTime+1
     if not "user_color" in comment["message"]:
         userColor = "#FFFFFF"
     else:
@@ -296,7 +299,7 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
         counter+=1
     return lastFilter,command,counter, emotelist
 
-def createChatImage(path,chatfile, overlayInterval, video_start):
+def createChatImage(path,chatfile, overlayInterval, video_start, index):
     BadgesFolder = path+"badges/"
     EmotesFolder = path+"emotes/"
     startTime = overlayInterval["interval"][0]
@@ -311,9 +314,13 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     timesToComments = createTimeToCommentIndexMap(data["comments"],video_start)
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24,1000,1000)
     ctx = cairo.Context(surface)
-    videopath = "/Users/Vijay/Downloads/SampleMatches/blank.mp4"
-    os.remove(videopath)
-    create_video(videopath,video_width,video_height,duration, backgroundColor)
+    input_video = path+"blank"+str(index)+".mp4"
+    output_video = path+"chat"+str(index)+".mp4"
+    if os.path.exists(input_video):
+        os.remove(input_video)
+    if os.path.exists(output_video):
+        os.remove(output_video)
+    create_video(input_video,video_width,video_height,duration, backgroundColor)
     ctx.set_font_size(FONT_SIZE)
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y
@@ -324,15 +331,15 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
     emotelist = list()
     for time in range(0,math.floor(duration)):
         timeInChatFile = time + math.ceil(startTime)
-        heights,outputFilter,current_command,counter,emotelist = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor,emotelist)
+        heights,outputFilter,current_command,counter,emotelist = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor,emotelist,duration)
         script += current_command
         lastFilter = outputFilter
     script = script[:-1]
     with open(path+"script.txt","w") as script_file:
         script_file.write(script)
-    ffmpeg_command = ["ffmpeg", "-i", videopath]
+    ffmpeg_command = ["ffmpeg", "-i", input_video]
     for i in range(len(emotelist)):
-        if "gif" in emotelist[i]:
+        if ".gif" in emotelist[i]:
             ffmpeg_command.append("-ignore_loop")
             ffmpeg_command.append("0")
             ffmpeg_command.append("-i")
@@ -340,19 +347,41 @@ def createChatImage(path,chatfile, overlayInterval, video_start):
         else:
             ffmpeg_command.append("-i")
             ffmpeg_command.append(emotelist[i])
-    ffmpeg_command.extend(["-filter_complex_script", path+"script.txt","-map",lastFilter,path+"output.mp4"])
-    if (os.path.exists(path+"output.mp4")):
-        os.remove(path+"output.mp4")
+    ffmpeg_command.extend(["-filter_complex_script", path+"script.txt","-map",lastFilter,output_video])
     #print(ffmpeg_command)
     subprocess.call(ffmpeg_command)
+    return output_video,duration
 
-def overlay_chats(path, overlayfile, chatfile, startTime):
+def overlay_chats(path, overlayfile, chatfile, startTime, input_video):
     with open(path+overlayfile) as frontend_data:
         data = json.load(frontend_data)
+    index = 1
+    ffmpeg_command = ["ffmpeg", "-i", input_video]
+    script = ""
+    lastFilter = "[0:v]"
     for overlayInterval in data["finalOverlayIntervals"]:
         if overlayInterval["type"]=="chat":
-            createChatImage(path,chatfile,overlayInterval,startTime)
-            break
+            chat_video,duration = createChatImage(path,chatfile,overlayInterval,startTime, index)
+            ffmpeg_command.extend(["-i", chat_video])
+            chatStart = overlayInterval["interval"][0]
+            chatX = overlayInterval["chatCoordinates"]["xScale"]*VIDEO_WIDTH
+            chatY = overlayInterval["chatCoordinates"]["yScale"]*VIDEO_HEIGHT
+            outputFilter = "[overlayedVideo{index}]".format(index=index)
+            script+="[{index}:v]setpts=PTS+{chatStart}/TB[overlay{index}];{lastFilter}[overlay{index}]overlay=enable=gte(t\,{duration}):y={chatY}:x={chatX}:eof_action=pass,format=yuv420p{outputFilter};".format(
+                index=index,
+                lastFilter=lastFilter,
+                chatStart=chatStart,
+                duration=duration,
+                chatX=chatX,
+                chatY=chatY,
+                outputFilter=outputFilter
+            )
+            lastFilter=outputFilter
+            index+=1
+    script=script[:-1]
+    ffmpeg_command.extend(["-filter_complex", script, "-map", lastFilter, "-map", "0:a?", "-c:v", "libx264", "-crf", "27", "-c:a", "copy", path+"new.mp4"])
+    print(ffmpeg_command)
+    subprocess.call(ffmpeg_command)
     
 
-overlay_chats("./","SampleOverlayIntervals.json", "658271026.json", 2700)
+overlay_chats("./","SampleOverlayIntervals.json", "658271026.json", 2700, "/Users/Vijay/Downloads/SampleMatches/apextest.mp4")
