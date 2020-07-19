@@ -123,7 +123,7 @@ def createTimeToCommentIndexMap(comments, video_start):
 
 
 
-def determineMessageHeight(comment, video_width,video_height, ctx):
+def determineMessageHeight(comment, video_width,video_height, ctx, path):
     xCoordinate = ORIGIN_X
     totalHeight = 0
     maxheight = 0
@@ -136,7 +136,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     
     if "user_badges" in comment["message"]:
         for badge in comment["message"]["user_badges"]:
-            badge_path = "./badges/"+badge["_id"] + "_" + badge["version"] + ".png"
+            badge_path = path+"badges/"+badge["_id"] + "_" + badge["version"] + ".png"
             dx = emote_width(badge_path)
             xCoordinate += dx
             xbearing, ybearing, width, height, dx, dy = ctx.text_extents(" ")
@@ -161,9 +161,9 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
     for fragment in comment["message"]["fragments"]:
         if "emoticon" in fragment:
             if not "id" in fragment["emoticon"]:
-                emote_path = "./emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
+                emote_path = path+"emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
             else:
-                emote_path = "./emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
+                emote_path = path+"emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
             dx = emote_width(emote_path)
         else:
             text = fragment["text"]
@@ -180,7 +180,7 @@ def determineMessageHeight(comment, video_width,video_height, ctx):
         xCoordinate += dx
     return totalHeight+maxheight
 
-def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor,emotelist, duration):
+def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,video_width, video_height,inputFilter,ctx,counter,textcolor,emotelist, duration,path):
     xCoordinate = ORIGIN_X
     yCoordinate = ORIGIN_Y + video_height
     command = ""
@@ -202,16 +202,16 @@ def render_comments(timeInVideo,timeInChatFile,timeToComments,comments,heights,v
         commentIndex = timeToComments[timeInChatFile][index]
         comment = comments[commentIndex]
         if not commentIndex in heights:
-            heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx)
+            heights[commentIndex]=determineMessageHeight(comment,video_width,video_height,ctx,path)
             print("HEIGHT OF",comment["message"]["body"],"IS",heights[commentIndex])
         yCoordinate -= heights[commentIndex]
-        lastFilter,comment_command,counter,emotelist = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width,emotelist, duration)
+        lastFilter,comment_command,counter,emotelist = render_comment(comment,timeInVideo,xCoordinate,yCoordinate,lastFilter,ctx,counter,textcolor, video_width,emotelist, duration,path)
         command+=comment_command
         yCoordinate -= COMMENT_SPACING
         if yCoordinate<ORIGIN_Y:
             return heights,lastFilter,command,counter,emotelist
 
-def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width, emotelist, duration):
+def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,counter,textcolor, video_width, emotelist, duration,path):
     command = ""
     lastFilter=inputFilter
     if startTime+1 >= duration-1:
@@ -231,7 +231,7 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
     if "user_badges" in comment["message"]:
         for badge in comment["message"]["user_badges"]:
             outputFilter = "[badge{counter}]".format(counter=counter)
-            badge_path = "./badges/"+badge["_id"] + "_" + badge["version"] + ".png"
+            badge_path = path + "badges/"+badge["_id"] + "_" + badge["version"] + ".png"
             outputFilter = "[username{counter}]".format(counter=counter)
             if not badge_path in emotelist:
                 emotelist.append(badge_path)
@@ -270,10 +270,10 @@ def render_comment(comment,startTime,xCoordinate,yCoordinate,inputFilter,ctx,cou
         outputFilter = "[fragment{counter}]".format(counter=counter)
         if "emoticon" in fragment:
             if not "id" in fragment["emoticon"]:
-                emote_path = "./emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
+                emote_path = path + "emotes/"+str(fragment["emoticon"]["emoticon_id"])+".png"
                 filetype="png"
             else:
-                emote_path = "./emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
+                emote_path = path + "emotes/"+str(fragment["emoticon"]["id"])+"."+fragment["emoticon"]["type"]
                 filetype=fragment["emoticon"]["type"]
             if not emote_path in emotelist:
                 emotelist.append(emote_path)
@@ -331,7 +331,7 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index):
     emotelist = list()
     for time in range(0,math.floor(duration)):
         timeInChatFile = time + math.ceil(startTime)
-        heights,outputFilter,current_command,counter,emotelist = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor,emotelist,duration)
+        heights,outputFilter,current_command,counter,emotelist = render_comments(time,timeInChatFile,timesToComments,data["comments"],heights,video_width, video_height,lastFilter,ctx,counter,textcolor,emotelist,duration,path)
         script += current_command
         lastFilter = outputFilter
     script = script[:-1]
@@ -352,7 +352,7 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index):
     subprocess.call(ffmpeg_command)
     return output_video,duration
 
-def overlay_chats(path, overlayfile, chatfile, startTime, input_video):
+def overlayChats(path, overlayfile, chatfile, startTime, input_video):
     with open(path+overlayfile) as frontend_data:
         data = json.load(frontend_data)
     index = 1
@@ -384,4 +384,4 @@ def overlay_chats(path, overlayfile, chatfile, startTime, input_video):
     subprocess.call(ffmpeg_command)
     
 
-overlay_chats("./","SampleOverlayIntervals.json", "658271026.json", 2700, "/Users/Vijay/Downloads/SampleMatches/apextest.mp4")
+overlayChats("./","SampleOverlayIntervals.json", "658271026.json", 2700, "/Users/Vijay/Downloads/SampleMatches/apextest.mp4")
