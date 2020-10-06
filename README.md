@@ -11,5 +11,3 @@ Anyway, this is just part of a codebase that I worked on and I am proud to share
 Please message me with any questions with questions otherwise.
 
 Thanks again :)
-
-P.S. Hi if you are a Riot recruiter, I would love to work for your company!
