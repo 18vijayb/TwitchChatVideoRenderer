@@ -1,4 +1,6 @@
 .vscode/
 env/
 tcd/__pycache__
+__pycache__/
+settings.json
 Config.py
