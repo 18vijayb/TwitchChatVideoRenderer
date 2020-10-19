@@ -15,8 +15,6 @@ class Settings(metaclass=Singleton):
         :param reference_filepath: Path to reference settings file
         """
         filepath = "settings.json"
-        print("THISISTHEFILEPATH:)")
-        print(filepath)
         if filepath is None:
             print('Settings filepath was not provided')
             exit(1)

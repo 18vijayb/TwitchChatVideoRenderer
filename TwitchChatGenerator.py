@@ -5,7 +5,6 @@ from PIL import Image, ImageFont
 import subprocess
 import math
 from timeit import default_timer as timer
-import cv2
 from os import listdir
 from os.path import isfile, join
 
@@ -26,45 +25,10 @@ ENGLISH_REGULAR_FONT_FILE = "Arial.ttf"
 ENGLISH_BOLD_FONT_FILE = "ArialBold.ttf"
 ENGLISH_REGULAR_FONT = ImageFont.truetype(ENGLISH_REGULAR_FONT_FILE, FONT_SIZE)
 ENGLISH_BOLD_FONT = ImageFont.truetype(ENGLISH_BOLD_FONT_FILE, FONT_SIZE)
-REGULAR_FONT_FILE = "Roobert-SemiBold.otf"
-BOLD_FONT_FILE = "Roobert-Heavy.otf"
+REGULAR_FONT_FILE = "Arial.ttf"
+BOLD_FONT_FILE = "ArialBold.ttf"
 REGULAR_FONT = ImageFont.truetype(REGULAR_FONT_FILE, FONT_SIZE)
 BOLD_FONT = ImageFont.truetype(BOLD_FONT_FILE, FONT_SIZE)
-
-
-#####CONSTANTS#######
-
-def init(input_video):
-    global VIDEO_HEIGHT
-    global VIDEO_WIDTH
-    global FONT_SIZE
-    global COMMENT_SPACING
-    global NO_EMOTE_COMMENT_SPACING
-    global LINE_SPACING
-    global SMALL_EMOTE_SIZE
-    global REGULAR_FONT
-    global BOLD_FONT
-    global ENGLISH_REGULAR_FONT
-    global ENGLISH_BOLD_FONT
-    global IMAGE_ADJUST
-    vid = cv2.VideoCapture(input_video)
-    actual_height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    actual_width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-    height_multiplier = actual_height/VIDEO_HEIGHT
-    width_multiplier = actual_width/VIDEO_WIDTH
-    VIDEO_WIDTH = actual_width
-    VIDEO_HEIGHT = actual_height
-    FONT_SIZE *= width_multiplier
-    FONT_SIZE = int(FONT_SIZE)
-    REGULAR_FONT = ImageFont.truetype(REGULAR_FONT_FILE, FONT_SIZE)
-    BOLD_FONT = ImageFont.truetype(BOLD_FONT_FILE, FONT_SIZE)
-    ENGLISH_REGULAR_FONT = ImageFont.truetype(ENGLISH_REGULAR_FONT_FILE, FONT_SIZE)
-    ENGLISH_BOLD_FONT = ImageFont.truetype(ENGLISH_BOLD_FONT_FILE, FONT_SIZE)
-    COMMENT_SPACING *= height_multiplier
-    NO_EMOTE_COMMENT_SPACING *= height_multiplier 
-    LINE_SPACING *= height_multiplier
-    IMAGE_ADJUST *= height_multiplier
-    SMALL_EMOTE_SIZE *= height_multiplier
 
 def isEnglish(s):
     try:
@@ -434,25 +398,22 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     subprocess.call(ffmpeg_command)
     return output_video, duration
 
-def createChatImageFaster(path,chatfile,overlayInterval,startTime, index):
+def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
     overlayStart = overlayInterval["interval"][0]
     overlayEnd = overlayInterval["interval"][1]
     overallDuration = overlayEnd-overlayStart
     time = overlayStart
-    finalOutputVid = path+"chat"+str(index)+".mov"
+    finalOutputVid = path+str(VOD)+".mov"
     smallerIndex = 0
     vidList = []
     while time < overlayEnd:
         if (time+INDIVIDUAL_DURATIONS >overlayEnd):
-            output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, ((index+1)*10)+smallerIndex, time, overlayEnd)
+            output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, overlayEnd)
         else:
-            output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, ((index+1)*10)+smallerIndex, time, time+INDIVIDUAL_DURATIONS)
+            output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, time+INDIVIDUAL_DURATIONS)
         vidList.append(output_vid)
         time+=duration
         smallerIndex+=1
-    
-    if (os.path.exists(path+"foo2.txt")):
-        os.remove(path+"foo2.txt")
 
     for vid in vidList:
         subprocess.call("echo file "+vid + " >> "+path+"foo2.txt", shell=True)

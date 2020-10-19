@@ -2,7 +2,6 @@ import json
 import requests
 from progressbar import ProgressBar
 import os
-import cv2
 import random
 from PIL import Image
 from os import listdir
@@ -86,16 +85,7 @@ def getFFZEmoteDict(channelName):
                 emoteDict[emote["name"]]["type"]="gif"
     return emoteDict 
 
-def refineComments(path,file, chattxtfile, videofile):
-    global VIDEO_HEIGHT
-    global VIDEO_WIDTH
-    global VIDEO_HEIGHT_MULTIPLIER
-    global VIDEO_WIDTH_MULTIPLIER
-    vid = cv2.VideoCapture(videofile)
-    actual_height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    actual_width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-    VIDEO_HEIGHT_MULTIPLIER = actual_height/VIDEO_HEIGHT
-    VIDEO_WIDTH_MULTIPLIER = actual_width/VIDEO_WIDTH
+def refineComments(path,file, chattxtfile):
     EmotesFolder = path+"/emotes/"
     BadgesFolder = path+"/badges/"
     os.mkdir(EmotesFolder)
