@@ -1,0 +1,92 @@
+{
+    "client_id": null,
+    "client_secret": null,
+    "formats": {
+        "all": {
+            "blacklist": [],
+            "whitelist": []
+        },
+        "default": {
+            "comments": {
+                "format": "[{timestamp[relative]}] <{commenter[display_name]}> {message[body]}",
+                "timestamp": {
+                    "relative": "%X"
+                },
+                "ignore_new_messages": false
+            },
+            "output": {
+                "format": "{id}.txt",
+                "timestamp": {
+                    "absolute": "%x"
+                }
+            }
+        },
+        "irc": {
+            "comments": {
+                "action_format": "[{timestamp[relative]}] *{commenter[display_name]} {message[body]}]",
+                "badges": {
+                    "admin": "!",
+                    "bits": "$",
+                    "broadcaster": "~",
+                    "global_mod": "*",
+                    "moderator": "@",
+                    "premium": "+",
+                    "staff": "&",
+                    "subscriber": "%",
+                    "turbo": "+"
+                },
+                "format": "[{timestamp[relative]}] <{commenter[badge]}{commenter[display_name]}> {message[body]}",
+                "multiple_badges": false,
+                "timestamp": {
+                    "relative": "%x"
+                }
+            },
+            "output": {
+                "format": "{id}.log"
+            }
+        },
+        "json": {
+            "output": {
+                "format": "{id}.json"
+            }
+        },
+        "srt": {
+            "comments": {
+                "format": "{commenter[display_name]}: {message[body]}"
+            },
+            "duration": 2000,
+            "output": {
+                "format": "{id}.srt"
+            }
+        },
+        "ssa": {
+            "comments": {
+                "default_user_color": "random",
+                "format": "{\\c&{message[ssa_user_color]}&}{commenter[display_name]} {\\c&HFFFFFF&}{message[body]}"
+            },
+            "duration": 2000,
+            "events": {
+                "dialogue": "Dialogue: Marked=0,{start},{end},Default,{commenter[display_name]},0000,0000,0000,,{comment}",
+                "format": "Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
+            },
+            "fonts": "",
+            "graphics": "",
+            "output": {
+                "format": "{id}.ssa",
+                "timestamp": {
+                    "absolute": "%x"
+                }
+            },
+            "resolution": {
+                "x": 1280,
+                "y": 720
+            },
+            "styles": {
+                "format": "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding",
+                "values": "Style: Default,Arial,21,16777215,8793979,0,-2147483640,0,0,1,1.5,0,11,30,30,30,0,0"
+            }
+        }
+    },
+    "valid_filename_regex": "[^-\\w.()\\[\\]{}@%! ]",
+    "version": "3.2.0"
+}
