@@ -5,5 +5,5 @@ def downloadTwitchChatFile(path, v, cID, cSecret, startTime, endTime):
     osRetJsonCode = os.system(tcdjsoncmd)
     
 
-downloadTwitchChatFile("/Users/Vijay/Downloads", 770808731, "4l1wbak0le96jy2p5wlszgffl7pp0k", "svts1p7z6l5up9d3hxedtl5v5hykzp", 50, 100)
+downloadTwitchChatFile("/Users/Vijay/Downloads", 770808731, 0, 1000000)
 
