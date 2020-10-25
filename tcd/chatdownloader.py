@@ -78,12 +78,6 @@ def main():
             format_dictionary = Settings().config['formats'][format_name]
             Logger().log(f'[{format_name}]', retain=False)
 
-            if 'comments' in format_dictionary:
-                print('comment: {}'.format(Settings().config['formats'][format_name]['comments']['format']))
-
-            if 'output' in format_dictionary:
-                print('output: {}'.format(Settings().config['formats'][format_name]['output']['format']))
-
             Logger().log('\n', retain=False)
         return
 

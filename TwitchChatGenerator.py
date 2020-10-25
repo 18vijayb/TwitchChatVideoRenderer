@@ -82,12 +82,8 @@ def emote_height(filepath):
     return height
 
 def create_video(blankvideo,video, width, height, duration):
-    #command = ["ffmpeg", "-t", str(duration), "-s", str(width)+"x"+str(height), "-f", "rawvideo", "-pix_fmt", "rgb24", "-r", "60", "-i", "/dev/zero", videopath]
-    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=0x000000:"+str(width)+"x"+str(height+ORIGIN_Y), "-r", "30","-loglevel","warning", blankvideo]
+    command = ["ffmpeg", "-t", str(duration), "-f", "lavfi", "-i", "color=0x000000:"+str(width)+"x"+str(height+ORIGIN_Y), "-r", "30","-pix_fmt",  "yuv420p", "-loglevel","quiet", video]
     subprocess.call(command)
-    command2 = ["ffmpeg","-i", blankvideo, "-vf", "chromakey=0x000000:0.01:0.0,drawbox=c='white'@1.0:t=fill", "-loglevel","warning", "-c:v", "png", video]
-    #command2 = ["ffmpeg", "-i", blankvideo, "-filter_complex","[0]split[m][a];[a]geq='if(lt(lum(X,Y),16),0,255)',hue=s=0[al];[m][al]alphamerge,format=yuva420p","-c:v", "libvpx", video]
-    subprocess.call(command2)
 
 
 def drawtext(inputFilter, startTime, endTime, font, text, yCoordinate, xCoordinate, color, outputFilter):
@@ -327,15 +323,14 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     video_height = int(overlayInterval["chatCoordinates"]["heightScale"]*VIDEO_HEIGHT)
     duration = endTime-startTime
     textcolor = convert_rgb_to_hex(overlayInterval["textRGB"])
-    backgroundColor, alpha = convert_rgba_to_hex(overlayInterval["backgroundRGBA"])
     with open(path + chatfile) as chat:
         data = json.load(chat)
     with open(path + "ChatDictionary.json") as chatdict:
         userInfo = json.load(chatdict)["UserInfo"]
     timesToComments = createTimeToCommentIndexMap(data["comments"], video_start)
-    input_video = path + "blank" + str(index) + ".mov"
+    input_video = path + "blank" + str(index) + ".mp4"
     input_video_trans = path + "blanktrans" + str(index) + ".mov"
-    output_video = path + "chat" + str(index) + ".mov"
+    output_video = path + "chat" + str(index) + ".mp4"
     if os.path.exists(input_video):
         os.remove(input_video)
     if os.path.exists(output_video):
@@ -346,18 +341,18 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     counter = 0
     lastFilter = "[0:v]"
     script = ""
-    outputFilter = "[box]"
-    script += "{lastFilter}drawbox=enable='between(t,{startTime},{endTime})':w={overlay_width}:h={overlay_height}:c={backgroundColor}@{alpha}:t=fill {outputFilter};".format(
-                lastFilter=lastFilter,
-                startTime=0,
-                endTime=duration,
-                overlay_width=video_width,
-                overlay_height=video_height,
-                backgroundColor=backgroundColor,
-                alpha=1,
-                outputFilter=outputFilter
-            )
-    lastFilter = outputFilter
+    # outputFilter = "[box]"
+    # script += "{lastFilter}drawbox=enable='between(t,{startTime},{endTime})':w={overlay_width}:h={overlay_height}:c={backgroundColor}@{alpha}:t=fill {outputFilter};".format(
+    #             lastFilter=lastFilter,
+    #             startTime=0,
+    #             endTime=duration,
+    #             overlay_width=video_width,
+    #             overlay_height=video_height,
+    #             backgroundColor=backgroundColor,
+    #             alpha=1,
+    #             outputFilter=outputFilter
+    #         )
+    # lastFilter = outputFilter
     heights = dict()
     emotelist = list()
     #We append a set of chats at each second of the video
@@ -392,9 +387,7 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
             ffmpeg_command.append("-i")
             ffmpeg_command.append(emotelist[i])
     ffmpeg_command.extend(
-        ["-filter_complex_script", path + "script.txt", "-map", lastFilter, "-loglevel", "warning", "-c:v", "png",
-         output_video])
-    # print(ffmpeg_command)
+        ["-filter_complex_script", path + "script.txt", "-map", lastFilter, "-loglevel", "quiet", "-nostats", "-c:v", "libx264", "-pix_fmt",  "yuv420p", output_video])
     subprocess.call(ffmpeg_command)
     return output_video, duration
 
@@ -403,9 +396,11 @@ def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
     overlayEnd = overlayInterval["interval"][1]
     overallDuration = overlayEnd-overlayStart
     time = overlayStart
-    finalOutputVid = path+str(VOD)+".mov"
+    finalOutputVid = path+str(VOD)+".mp4"
     smallerIndex = 0
     vidList = []
+    # pbar = ProgressBar()
+    # pbar.start()
     while time < overlayEnd:
         if (time+INDIVIDUAL_DURATIONS >overlayEnd):
             output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, overlayEnd)
@@ -413,16 +408,17 @@ def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
             output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, time+INDIVIDUAL_DURATIONS)
         vidList.append(output_vid)
         time+=duration
+        # pbar.update(time)
         smallerIndex+=1
 
     for vid in vidList:
         subprocess.call("echo file "+vid + " >> "+path+"foo2.txt", shell=True)
     
-    ffmpeg_command5 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", path+"foo2.txt", "-c", "copy", "-loglevel", "warning", finalOutputVid]
+    ffmpeg_command5 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", path+"foo2.txt", "-c", "copy", "-loglevel", "quiet", finalOutputVid]
     subprocess.call(ffmpeg_command5)
     for vid in vidList:
         os.remove(vid)
     for f in listdir(path):
-        if isfile(join(path, f)) and ("mov" in f) and ("blank" in f):
+        if isfile(join(path, f)) and ("mp4" in f) and ("blank" in f):
             os.remove(path+f)
     return finalOutputVid, overallDuration

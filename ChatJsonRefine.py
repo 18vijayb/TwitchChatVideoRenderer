@@ -110,13 +110,13 @@ def refineComments(path,file, chattxtfile):
     downloaded = set()
     for comment in pbar(data["comments"]):
         comment.pop("_id")
-        comment.pop("channel_id")
-        comment.pop("content_id")
-        comment.pop("content_type")
-        comment.pop("created_at")
-        comment.pop("source")
-        comment.pop("state")
-        comment.pop("updated_at")
+        comment.pop("channel_id", None)
+        comment.pop("content_id", None)
+        comment.pop("content_type", None)
+        comment.pop("created_at", None)
+        comment.pop("source", None)
+        comment.pop("state", None)
+        comment.pop("updated_at", None)
         comment["commenter"] = comment["commenter"]["name"]
         commenter = comment["commenter"]
         userStartIndex = txtLower.find(commenter)
@@ -132,8 +132,8 @@ def refineComments(path,file, chattxtfile):
         else:
             userDictionary[commenter]["color"] = comment["message"]["user_color"]
 
-        comment["message"].pop("is_action")
-        comment["message"].pop("user_notice_params")
+        comment["message"].pop("is_action", None)
+        comment["message"].pop("user_notice_params", None)
         message = comment["message"]
         if ("user_badges" in message):
             badgeList = list()

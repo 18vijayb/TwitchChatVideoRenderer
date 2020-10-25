@@ -1,6 +1,12 @@
 # TwitchChatVideoRenderer
 
-Hello! Thanks for checking out this repository.
+What: This repository downloads twitch chat to a video file
+
+TCD: https://github.com/PetterKraabol/Twitch-Chat-Downloader
+
+How to use (only linux machines):
+1. [Install FFmpeg](https://ffmpeg.org/download.html). I prefer using [homebrew](https://brew.sh/). Simple `brew install ffmpeg`
+2. Install the dependencies in requirements.txt
 
 The code will generate an equivalent video of twitch chat, with emotes and all. All it requires is a twitch json file, which can be downloaded with TCD.
 

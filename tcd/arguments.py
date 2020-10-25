@@ -37,10 +37,9 @@ class Arguments(metaclass=Singleton):
         Initialize arguments
         :param arguments: Arguments from cli (Optional to call singleton instance without parameters)
         """
-        print(arguments)
         if arguments is None:
 
-            print('Error: arguments were not provided ahsidoasoid')
+            print('Error: arguments were not provided')
             exit()
 
         # Required arguments and booleans
