@@ -1,17 +1,30 @@
 # TwitchChatVideoRenderer
 
-What: This repository downloads twitch chat to a video file
+## About
+The code will generate an equivalent video of twitch chat, with Twitch, BTTV, and FFZ emotes included. All it requires is a twitch json file, which can be downloaded with TCD.
 
 TCD: https://github.com/PetterKraabol/Twitch-Chat-Downloader
 
+## Usage
 How to use (only linux machines):
-1. [Install FFmpeg](https://ffmpeg.org/download.html). I prefer using [homebrew](https://brew.sh/). Simple `brew install ffmpeg`
-2. Install the dependencies in requirements.txt
+1. [Install FFmpeg](https://ffmpeg.org/download.html). I prefer using [homebrew](https://brew.sh/). Simply `brew install ffmpeg`
+2. Python interpreter and pip. Install dependencies with `pip install -r requirements.txt`
+3. Twitch dev credentials - client-id and client-secret - from [here](https://dev.twitch.tv/console/apps/). Make an account, create a dummy app, and grab the credentials.
+
+python TCVR.py --help for more detailed info
+
+python TCVR.py --client_id {YOUR CLIENT ID} --client_secret {YOUR CLIENT SECRET} --output {OUTPUT DIRECTORY} --video {Twitch VOD ID} --start_time {START TIME OF CHAT} --duration {DURATION OF CHAT}
+
+You only need client_secret and client_id on first run. After that you only need
+
+To fine tune your video, check out ChatSettings.py
+
+## More Information
+
+FFmpeg processing time varies by CPU. It takes me about 2 minutes to generate a 5 minute chat file.
 
 The code will generate an equivalent video of twitch chat, with emotes and all. All it requires is a twitch json file, which can be downloaded with TCD.
 
-Anyway, this is just part of a codebase that I worked on and I am proud to share. Reach out to me for demo videos and I will be more than glad to share them with you.
+Open any issues if you have questions or email me. This is part of a bigger project.
 
-Please message me with any questions with questions otherwise.
-
-Thanks again :)
+Leave a star if it works for you!

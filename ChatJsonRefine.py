@@ -104,7 +104,7 @@ def refineComments(path,file, chattxtfile):
     emoteDictionary["bttv_emotes"] = dict()
     emoteDictionary["ffz_emotes"] = dict()
     downloaded = set()
-    if len(data["comments"]):
+    if len(data["comments"])==0:
         print("There is no chat in the specified duration! Can't render video :(")
         return 500
     for comment in tqdm(data["comments"]):
