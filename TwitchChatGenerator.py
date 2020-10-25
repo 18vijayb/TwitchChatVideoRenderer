@@ -43,7 +43,7 @@ def create_video(blankvideo,video, width, height, duration):
 
 
 def drawtext(inputFilter, startTime, endTime, font, text, yCoordinate, xCoordinate, color, outputFilter):
-    text = text.replace("\'", "").replace("\\", "").replace(":", "\:")
+    text = text.replace('\\', "\\\\\\\\").replace("\'", "'\\\\\\\''").replace(":", "\\\\\\:").replace("%","\\\\\\%")
     return "{inputFilter}drawtext=enable='between(t,{startTime},{endTime})':fontfile='{font}':text='{text}':y={yCoordinate}-max_glyph_a:x={xCoordinate}:fontsize={FONT_SIZE}:fontcolor='{color}' {outputFilter};".format(
         inputFilter=inputFilter,
         startTime=startTime,
