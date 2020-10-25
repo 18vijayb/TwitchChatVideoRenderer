@@ -11,11 +11,11 @@ How to use (only linux machines):
 2. Python interpreter and pip. Install dependencies with `pip install -r requirements.txt`
 3. Twitch dev credentials - client-id and client-secret - from [here](https://dev.twitch.tv/console/apps/). Make an account, create a dummy app, and grab the credentials.
 
-python TCVR.py --help for more detailed info
+`python TCVR.py --help for more detailed info`
 
-python TCVR.py --client_id {YOUR CLIENT ID} --client_secret {YOUR CLIENT SECRET} --output {OUTPUT DIRECTORY} --video {Twitch VOD ID} --start_time {START TIME OF CHAT} --duration {DURATION OF CHAT}
+`python TCVR.py --client_id {YOUR CLIENT ID} --client_secret {YOUR CLIENT SECRET} --output {OUTPUT DIRECTORY} --video {Twitch VOD ID} --start_time {START TIME OF CHAT} --duration {DURATION OF CHAT}`
 
-You only need client_secret and client_id on first run. After that you only need
+You only need client_secret and client_id on first run. After that you only need VOD id is the minimum parameter requirement.
 
 To fine tune your video, check out ChatSettings.py
 
