@@ -1,6 +1,6 @@
 import json
 import os
-from progressbar import ProgressBar
+from tqdm import tqdm
 from PIL import Image, ImageFont
 import subprocess
 import math
@@ -10,25 +10,15 @@ from os.path import isfile, join
 
 #####CONSTANTS#######
 
-COMMENT_SPACING = 45
-NO_EMOTE_COMMENT_SPACING = 30
-LINE_SPACING = 8
-ORIGIN_X = 0
-ORIGIN_Y = 1000
-VIDEO_WIDTH = 1920
-VIDEO_HEIGHT = 1080
-FONT_SIZE = 20
-IMAGE_ADJUST = 10
-SMALL_EMOTE_SIZE = 23
-INDIVIDUAL_DURATIONS = 3
-ENGLISH_REGULAR_FONT_FILE = "Arial.ttf"
-ENGLISH_BOLD_FONT_FILE = "ArialBold.ttf"
-ENGLISH_REGULAR_FONT = ImageFont.truetype(ENGLISH_REGULAR_FONT_FILE, FONT_SIZE)
-ENGLISH_BOLD_FONT = ImageFont.truetype(ENGLISH_BOLD_FONT_FILE, FONT_SIZE)
-REGULAR_FONT_FILE = "Arial.ttf"
-BOLD_FONT_FILE = "ArialBold.ttf"
+from ChatSettings import COMMENT_SPACING, NO_EMOTE_COMMENT_SPACING, LINE_SPACING 
+from ChatSettings import TEXT_COLOR, FONT_SIZE, ENGLISH_REGULAR_FONT_FILE, ENGLISH_BOLD_FONT_FILE, REGULAR_FONT_FILE, BOLD_FONT_FILE
+from ChatSettings import CHAT_WIDTH, CHAT_HEIGHT
+from ChatSettings import IMAGE_ADJUST, SMALL_EMOTE_SIZE, ORIGIN_X, ORIGIN_Y, INDIVIDUAL_DURATIONS 
+
 REGULAR_FONT = ImageFont.truetype(REGULAR_FONT_FILE, FONT_SIZE)
 BOLD_FONT = ImageFont.truetype(BOLD_FONT_FILE, FONT_SIZE)
+ENGLISH_REGULAR_FONT = ImageFont.truetype(ENGLISH_REGULAR_FONT_FILE, FONT_SIZE)
+ENGLISH_BOLD_FONT = ImageFont.truetype(ENGLISH_BOLD_FONT_FILE, FONT_SIZE)
 
 def isEnglish(s):
     try:
@@ -37,40 +27,6 @@ def isEnglish(s):
         return False
     else:
         return True
-
-def convert_rgba_to_hex(inp):
-    try:
-        rgba = inp[5:-1]
-        rgba = rgba.split(",")
-        red = str(hex(int(rgba[0])))[2:]
-        if (len(red) == 1):
-            red = "0" + red
-        blue = str(hex(int(rgba[1])))[2:]
-        if (len(blue) == 1):
-            blue = "0" + blue
-        green = str(hex(int(rgba[2])))[2:]
-        if (len(green) == 1):
-            green = "0" + green
-        alpha = rgba[3]
-        return "#" + red + blue + green, alpha
-    except:
-        return convert_rgb_to_hex(inp)
-
-
-def convert_rgb_to_hex(rgb):
-    rgb = rgb[4:-1]
-    rgb = rgb.split(",")
-    red = str(hex(int(rgb[0])))[2:]
-    if (len(red) == 1):
-        red = "0" + red
-    blue = str(hex(int(rgb[1])))[2:]
-    if (len(blue) == 1):
-        blue = "0" + blue
-    green = str(hex(int(rgb[2])))[2:]
-    if (len(green) == 1):
-        green = "0" + green
-    return "#" + red + blue + green
-
 
 def emote_width(filepath):
     width, height = Image.open(filepath).size
@@ -319,10 +275,10 @@ def render_comment(comment, startTime, xCoordinate, yCoordinate, inputFilter, co
 def createChatImage(path,chatfile, overlayInterval, video_start, index, startTime, endTime):
     BadgesFolder = path+"badges/"
     EmotesFolder = path+"emotes/"
-    video_width = int(overlayInterval["chatCoordinates"]["widthScale"]*VIDEO_WIDTH)
-    video_height = int(overlayInterval["chatCoordinates"]["heightScale"]*VIDEO_HEIGHT)
+    video_width = CHAT_WIDTH
+    video_height = CHAT_HEIGHT
     duration = endTime-startTime
-    textcolor = convert_rgb_to_hex(overlayInterval["textRGB"])
+    textcolor = TEXT_COLOR
     with open(path + chatfile) as chat:
         data = json.load(chat)
     with open(path + "ChatDictionary.json") as chatdict:
@@ -341,18 +297,6 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     counter = 0
     lastFilter = "[0:v]"
     script = ""
-    # outputFilter = "[box]"
-    # script += "{lastFilter}drawbox=enable='between(t,{startTime},{endTime})':w={overlay_width}:h={overlay_height}:c={backgroundColor}@{alpha}:t=fill {outputFilter};".format(
-    #             lastFilter=lastFilter,
-    #             startTime=0,
-    #             endTime=duration,
-    #             overlay_width=video_width,
-    #             overlay_height=video_height,
-    #             backgroundColor=backgroundColor,
-    #             alpha=1,
-    #             outputFilter=outputFilter
-    #         )
-    # lastFilter = outputFilter
     heights = dict()
     emotelist = list()
     #We append a set of chats at each second of the video
@@ -399,8 +343,7 @@ def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
     finalOutputVid = path+str(VOD)+".mp4"
     smallerIndex = 0
     vidList = []
-    # pbar = ProgressBar()
-    # pbar.start()
+    pbar = tqdm(initial=time, total=overlayEnd)
     while time < overlayEnd:
         if (time+INDIVIDUAL_DURATIONS >overlayEnd):
             output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, overlayEnd)
@@ -408,9 +351,9 @@ def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
             output_vid,duration = createChatImage(path,chatfile, overlayInterval, startTime, smallerIndex, time, time+INDIVIDUAL_DURATIONS)
         vidList.append(output_vid)
         time+=duration
-        # pbar.update(time)
+        pbar.update(duration)
         smallerIndex+=1
-
+    pbar.close()
     for vid in vidList:
         subprocess.call("echo file "+vid + " >> "+path+"foo2.txt", shell=True)
     

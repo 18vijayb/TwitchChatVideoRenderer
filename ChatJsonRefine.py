@@ -1,6 +1,6 @@
 import json
 import requests
-from progressbar import ProgressBar
+from tqdm import tqdm
 import os
 import random
 from PIL import Image
@@ -90,7 +90,6 @@ def refineComments(path,file, chattxtfile):
     BadgesFolder = path+"/badges/"
     os.mkdir(EmotesFolder)
     os.mkdir(BadgesFolder)
-    pbar = ProgressBar()
     with open(file) as chatjson:
         data = json.load(chatjson)
     with open(chattxtfile) as txtfile:
@@ -108,7 +107,7 @@ def refineComments(path,file, chattxtfile):
     emoteDictionary["bttv_emotes"] = dict()
     emoteDictionary["ffz_emotes"] = dict()
     downloaded = set()
-    for comment in pbar(data["comments"]):
+    for comment in tqdm(data["comments"]):
         comment.pop("_id")
         comment.pop("channel_id", None)
         comment.pop("content_id", None)
