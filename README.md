@@ -9,7 +9,7 @@ TCD: https://github.com/PetterKraabol/Twitch-Chat-Downloader
 How to use (only linux machines):
 1. [Install FFmpeg](https://ffmpeg.org/download.html). I prefer using [homebrew](https://brew.sh/). Simply `brew install ffmpeg`
 2. Python interpreter and pip. Install dependencies with `pip install -r requirements.txt`
-3. Twitch dev credentials - client-id and client-secret - from [here](https://dev.twitch.tv/console/apps/). Make an account, create a dummy app, and grab the credentials.
+3. Twitch dev credentials - client-id and client-secret - from [here](https://dev.twitch.tv/console/apps/). Make an account, create a dummy app, and grab the credentials. FYI: These credentials allow you to download ANY VOD chat.
 
 `python TCVR.py --help for more detailed info`
 
