@@ -286,7 +286,8 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     timesToComments = createTimeToCommentIndexMap(data["comments"], video_start)
     input_video = path + "blank" + str(index) + ".mp4"
     input_video_trans = path + "blanktrans" + str(index) + ".mov"
-    output_video = path + "chat" + str(index) + ".mp4"
+    output_video_name = "chat" + str(index) + ".mp4"
+    output_video = path + output_video_name
     if os.path.exists(input_video):
         os.remove(input_video)
     if os.path.exists(output_video):
@@ -333,14 +334,21 @@ def createChatImage(path,chatfile, overlayInterval, video_start, index, startTim
     ffmpeg_command.extend(
         ["-filter_complex_script", path + "script.txt", "-map", lastFilter, "-loglevel", "quiet", "-nostats", "-c:v", "libx264", "-pix_fmt",  "yuv420p", output_video])
     subprocess.call(ffmpeg_command)
-    return output_video, duration
+    return output_video_name, duration
 
-def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
+def createChatImageFaster(path,outputPath,chatfile,overlayInterval,startTime, VOD):
     overlayStart = overlayInterval["interval"][0]
     overlayEnd = overlayInterval["interval"][1]
     overallDuration = overlayEnd-overlayStart
     time = overlayStart
-    finalOutputVid = path+str(VOD)+".mp4"
+    finalOutputVid = outputPath+str(VOD)+".mp4"
+    if os.path.exists(finalOutputVid):
+        index = 2
+        finalOutputVid = outputPath+str(VOD)+"_"+str(index)+".mp4"
+        while os.path.exists(finalOutputVid):
+            index += 1
+            finalOutputVid = outputPath+str(VOD)+"_"+str(index)+".mp4"
+
     smallerIndex = 0
     vidList = []
     pbar = tqdm(initial=time, total=overlayEnd)
@@ -357,10 +365,10 @@ def createChatImageFaster(path,chatfile,overlayInterval,startTime, VOD):
     for vid in vidList:
         subprocess.call("echo file "+vid + " >> "+path+"foo2.txt", shell=True)
     
-    ffmpeg_command5 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", path+"foo2.txt", "-c", "copy", "-loglevel", "quiet", finalOutputVid]
+    ffmpeg_command5 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", path+"foo2.txt", "-c", "copy", "-loglevel", "warning", finalOutputVid]
     subprocess.call(ffmpeg_command5)
     for vid in vidList:
-        os.remove(vid)
+        os.remove(path+vid)
     for f in listdir(path):
         if isfile(join(path, f)) and ("mp4" in f) and ("blank" in f):
             os.remove(path+f)

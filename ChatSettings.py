@@ -18,6 +18,11 @@ ENGLISH_BOLD_FONT_FILE = "ArialBold.ttf" #Font file for english characters if no
 CHAT_WIDTH = 576                         #The width of your chat output
 CHAT_HEIGHT = 864                        #The height of your chat output
 
+####### EMOTE SETTINGS ####### 
+
+EMOTE_HEIGHT_SCALE = 42                 #In pixels
+BADGE_HEIGHT_SCALE = 28                 #In pixels
+
 ####### ADVANCED SETTINGS ####### 
 
 IMAGE_ADJUST = 10            #Adjust emote height in-line based, if it is smaller in pixels than SMALL_EMOTE_SIZE in pixels

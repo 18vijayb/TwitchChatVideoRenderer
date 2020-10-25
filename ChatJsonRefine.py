@@ -8,10 +8,7 @@ from os import listdir
 from os.path import isfile, join
 import subprocess
 
-VIDEO_WIDTH = 1920
-VIDEO_HEIGHT = 1080
-VIDEO_WIDTH_MULTIPLIER = 1
-VIDEO_HEIGHT_MULTIPLIER = 1
+from ChatSettings import EMOTE_HEIGHT_SCALE, BADGE_HEIGHT_SCALE
 EMOTE_HEIGHT_SCALE = 42 #In pixels
 BADGE_HEIGHT_SCALE = 28 #In pixels
 
@@ -32,8 +29,8 @@ def downloadToFolder(url,folder,emoteName,fileType, isBadge):
         multiplier = BADGE_HEIGHT_SCALE/height
     else:
         multiplier = EMOTE_HEIGHT_SCALE/height
-    width = int(multiplier*width*VIDEO_WIDTH_MULTIPLIER)
-    height = int(multiplier*height*VIDEO_HEIGHT_MULTIPLIER)
+    width = int(multiplier*width)
+    height = int(multiplier*height)
     if (fileType=="gif"):
         resize_gif_command = ["ffmpeg", "-hide_banner", "-v", "warning", "-loglevel", "quiet", "-i", initimagepath, "-filter_complex", "[0:v] scale="+str(height)+":-1:flags=lanczos,split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse", imagepath]
         subprocess.call(resize_gif_command)
@@ -107,6 +104,9 @@ def refineComments(path,file, chattxtfile):
     emoteDictionary["bttv_emotes"] = dict()
     emoteDictionary["ffz_emotes"] = dict()
     downloaded = set()
+    if len(data["comments"]):
+        print("There is no chat in the specified duration! Can't render video :(")
+        return 500
     for comment in tqdm(data["comments"]):
         comment.pop("_id")
         comment.pop("channel_id", None)
@@ -213,3 +213,5 @@ def refineComments(path,file, chattxtfile):
     for f in listdir(BadgesFolder):
         if (isfile(join(BadgesFolder, f)) and ("init" in f)):
             os.remove(BadgesFolder+f)
+
+    return 200

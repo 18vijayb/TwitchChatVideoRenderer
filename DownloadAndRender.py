@@ -1,41 +1,27 @@
+#!/usr/bin/python
 import ChatJsonRefine
 import TwitchChatGenerator
 import os
 import shutil
-import Config
 
-path = "/Users/Vijay/Downloads/tempdir/"
-VOD = 778143013
-start = 150
-end = 200
-
-overlayInterval = {
-    "interval": [
-        30,
-        40
-    ],
-    "chatCoordinates": {
-        "widthScale": 0.3,
-        "heightScale": 0.8
-    },
-    "textRGB": "rgb(255,255,255)"
-}
-
-def main():
+def downloadAndRender(path, outputPath, VOD, start, end, twitchConfig):
     print("Preparing downloads...")
-    cleanup(path,VOD)
+    cleanup(path)
     print("Starting chat file download")
-    retCode = downloadTwitchChatFile(path, VOD, Config.client_id, Config.client_secret, start, end)
+    retCode = downloadTwitchChatFile(path, VOD, twitchConfig["client_id"], twitchConfig["client_secret"], start, end)
     if retCode==500:
         return
     print("Refining chat files")
-    ChatJsonRefine.refineComments(path, path+str(VOD)+".json", path+str(VOD)+".log")
+    retCode = ChatJsonRefine.refineComments(path, path+str(VOD)+".json", path+str(VOD)+".log")
+    if retCode==500:
+        cleanup(path)
+        return
     print("Creating video")
-    TwitchChatGenerator.createChatImageFaster(path, str(VOD)+".json", overlayInterval, start, VOD)
+    overlayInterval = {"interval": [0,end-start]}
+    output_file, duration = TwitchChatGenerator.createChatImageFaster(path, outputPath, str(VOD)+".json", overlayInterval, start, VOD)
     print("Cleaning up...")
-    cleanup(path,VOD)
+    cleanup(path)
     print("Finished!")
-    #TODO: Create a config file, containing the things that we want to adjust for the chat (e.g. font size, actual font
 
 def downloadTwitchChatFile(path, v, cID, cSecret, startTime, endTime):
     retries = 5
@@ -65,21 +51,7 @@ def executeCommandWithRetries(cmd, retries):
         print("Download unsuccessful! Please make sure the VOD is valid and the chat has not expired by going to twitch.tv")
         return 500
 
-def cleanup(path, VOD):
-    if (os.path.exists(path+"foo2.txt")):
-        os.remove(path+"foo2.txt")
-    if (os.path.exists(path+"script.txt")):
-        os.remove(path+"script.txt")
-    if (os.path.isdir(path+"emotes")):
-        shutil.rmtree(path+"emotes")
-    if (os.path.isdir(path+"badges")):
-        shutil.rmtree(path+"badges")
-    if (os.path.exists(path+str(VOD)+".json")):
-        os.remove(path+str(VOD)+".json")
-    if (os.path.exists(path+str(VOD)+".log")):
-        os.remove(path+str(VOD)+".log")
-    if (os.path.exists(path+"ChatDictionary.json")):
-        os.remove(path+"ChatDictionary.json")
-
-main()
+def cleanup(path):
+    if os.path.isdir(path):
+        shutil.rmtree(path)
 
